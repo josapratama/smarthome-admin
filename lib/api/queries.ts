@@ -1,36 +1,82 @@
-import { getOverview } from "@/lib/api/queries";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiFetch, apiUpload } from "./client";
+import { API } from "./endpoints";
 
-function Stat({ title, value }: { title: string; value: number }) {
-  return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="text-3xl font-semibold">{value}</div>
-      </CardContent>
-    </Card>
-  );
+/** Dashboard */
+export type OverviewResponse = {
+  users: number;
+  homes: number;
+  devices: number;
+  onlineDevices: number;
+  offlineDevices: number;
+};
+
+export async function getOverview() {
+  return apiFetch<OverviewResponse>(API.admin.overview);
 }
 
-export default async function DashboardPage() {
-  const data = await getOverview();
+/** Devices */
+export type DeviceListItem = {
+  id: number;
+  name?: string | null;
+  status?: boolean | null; // online/offline
+  lastSeenAt?: string | null; // sesuaikan field asli (kalau beda, ganti)
+  homeId?: number | null;
+};
 
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold">Overview</h1>
-        <p className="text-sm text-muted-foreground">Ringkasan sistem.</p>
-      </div>
+export async function listDevices() {
+  // asumsi backend return { data: DeviceDTO[] }
+  return apiFetch<{ data: DeviceListItem[] }>(API.devices.list);
+}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Stat title="Users" value={data.users} />
-        <Stat title="Homes" value={data.homes} />
-        <Stat title="Devices" value={data.devices} />
-        <Stat title="Online" value={data.onlineDevices} />
-        <Stat title="Offline" value={data.offlineDevices} />
-      </div>
-    </div>
-  );
+/** Firmware */
+export type FirmwareRelease = {
+  id: number;
+  version: string;
+  createdAt?: string;
+};
+
+export async function listFirmwareReleases() {
+  return apiFetch<{ data: FirmwareRelease[] }>(API.firmware.releases);
+}
+
+/** OTA */
+export type OtaJob = {
+  id: number;
+  deviceId: number;
+  status: "SENT" | "DOWNLOADING" | "APPLIED" | "FAILED" | "TIMEOUT" | string;
+  createdAt?: string;
+};
+
+export async function listOtaJobsByDevice(deviceId: number) {
+  return apiFetch<{ data: OtaJob[] }>(API.ota.jobsByDevice(deviceId));
+}
+
+/** Monitoring */
+export type CommandHistoryItem = {
+  id: number;
+  deviceId: number;
+  status: "PENDING" | "SENT" | "ACKED" | "FAILED" | "TIMEOUT" | string;
+  createdAt?: string;
+};
+
+export async function listCommands() {
+  return apiFetch<{ data: CommandHistoryItem[] }>(API.monitoring.commands);
+}
+
+export type UploadFirmwareResponse = {
+  data?: unknown;
+  message?: string;
+};
+
+export async function uploadFirmwareRelease(input: {
+  version: string;
+  notes?: string;
+  file: File;
+}) {
+  const form = new FormData();
+  form.append("version", input.version);
+  if (input.notes) form.append("notes", input.notes);
+  form.append("file", input.file);
+
+  return apiUpload<UploadFirmwareResponse>(API.firmware.upload, form);
 }

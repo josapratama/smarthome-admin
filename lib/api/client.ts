@@ -47,3 +47,26 @@ export async function apiFetch<T>(
   if (!res.ok) throw new ApiError(res.status, payload);
   return payload as T;
 }
+
+export async function apiUpload<T>(path: string, form: FormData): Promise<T> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("admin_token")?.value;
+
+  const res = await fetch(`${getBaseUrl()}${getApiPrefix()}${path}`, {
+    method: "POST",
+    headers: {
+      ...(token ? { authorization: `Bearer ${token}` } : {}),
+      // ⚠️ jangan set content-type untuk FormData; biar browser set boundary
+    },
+    body: form,
+    cache: "no-store",
+  });
+
+  const isJson = res.headers.get("content-type")?.includes("application/json");
+  const payload = isJson
+    ? await res.json().catch(() => null)
+    : await res.text().catch(() => null);
+
+  if (!res.ok) throw new ApiError(res.status, payload);
+  return payload as T;
+}

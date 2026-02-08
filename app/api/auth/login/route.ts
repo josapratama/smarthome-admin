@@ -2,10 +2,14 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
+
   const base = process.env.BACKEND_BASE_URL?.replace(/\/$/, "");
-  const prefix = (process.env.BACKEND_API_PREFIX ?? "").startsWith("/")
-    ? (process.env.BACKEND_API_PREFIX ?? "")
-    : `/${process.env.BACKEND_API_PREFIX ?? ""}`;
+  const prefixRaw = process.env.BACKEND_API_PREFIX ?? "";
+  const prefix = prefixRaw
+    ? prefixRaw.startsWith("/")
+      ? prefixRaw
+      : `/${prefixRaw}`
+    : "";
 
   if (!base)
     return NextResponse.json(
@@ -13,11 +17,11 @@ export async function POST(req: Request) {
       { status: 500 },
     );
 
-  // sesuaikan path backend login kamu di bawah ini jika berbeda
+  // OpenAPI: POST /api/v1/auth/login
   const upstream = await fetch(`${base}${prefix}/auth/login`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
+    body: JSON.stringify(body), // expects { identifier, password }
   });
 
   const payload = await upstream.json().catch(() => null);
@@ -28,16 +32,19 @@ export async function POST(req: Request) {
     });
   }
 
-  // asumsi backend mengembalikan { token: "..." }
-  const token = payload?.token;
+  // OpenAPI: AuthLoginResponse -> payload.data.accessToken
+  const token = payload?.data?.accessToken;
   if (!token) {
     return NextResponse.json(
-      { message: "Missing token from backend" },
+      { message: "Missing accessToken from backend" },
       { status: 502 },
     );
   }
 
-  const res = NextResponse.json({ ok: true });
+  const res = NextResponse.json({
+    ok: true,
+    user: payload?.data?.user ?? null,
+  });
   res.cookies.set("admin_token", token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

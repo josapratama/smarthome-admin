@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { uploadFirmwareAction } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getErrorMessage } from "@/lib/utils";
 
 export function UploadFirmwareForm() {
   const [version, setVersion] = useState("");
@@ -29,19 +29,29 @@ export function UploadFirmwareForm() {
 
     setLoading(true);
     try {
-      await uploadFirmwareAction(fd);
+      const res = await fetch("/api/firmware/upload", {
+        method: "POST",
+        body: fd,
+      });
+      if (!res.ok) {
+        const payload: unknown = await res.json().catch(() => null);
+        const msg =
+          getErrorMessage(payload) ?? `Upload gagal (HTTP ${res.status})`;
+        throw new Error(msg);
+      }
+
       setOk("Upload berhasil.");
       setVersion("");
       setNotes("");
       setFile(null);
-      // kalau kamu mau auto refresh list releases:
-      // location.reload();
+      // optional: refresh list
+      // window.location.reload();
     } catch (e: unknown) {
-      if (e instanceof Error) {
-        setErr(e.message || "Upload gagal.");
-      } else {
-        setErr("Upload gagal.");
-      }
+      setErr(
+        e instanceof Error ? e.message || "Upload gagal." : "Upload gagal.",
+      );
+    } finally {
+      setLoading(false);
     }
   }
 

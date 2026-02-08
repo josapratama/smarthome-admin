@@ -1,36 +1,139 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SmartHome Admin (Web)
 
-## Getting Started
+Admin dashboard untuk Smart Home platform:
 
-First, run the development server:
+- Login (JWT via httpOnly cookie)
+- Overview (users/homes/devices/online/offline)
+- Device management
+- Firmware & OTA management
+- Monitoring (command history, OTA job detail)
+
+## Tech Stack
+
+- Next.js (App Router)
+- TypeScript
+- Tailwind + shadcn/ui
+- Bun runtime
+
+## Badges
+
+> Ganti `YOUR_GITHUB_USERNAME` dan `smarthome-admin` sesuai repo kamu.
+
+![CI](https://github.com/YOUR_GITHUB_USERNAME/smarthome-admin/actions/workflows/ci.yml/badge.svg)
+![Next](https://img.shields.io/badge/Next.js-16.x-black)
+![React](https://img.shields.io/badge/React-19.x-000000)
+![Bun](https://img.shields.io/badge/Bun-runtime-black)
+
+---
+
+## Requirements
+
+- Bun (recommended)
+- Backend sudah running (Hono/Bun) + PostgreSQL + MQTT (untuk data real)
+
+## Environment Variables
+
+Buat file `.env.local`:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+# App
+NEXT_PUBLIC_APP_NAME="Smart Home Admin"
+
+# Backend base URL (tanpa trailing slash)
+BACKEND_BASE_URL="http://localhost:3000"
+
+# Prefix path API backend (sesuaikan dengan base path kamu)
+BACKEND_API_PREFIX="/routes/v1"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Catatan:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- BACKEND_BASE_URL dan BACKEND_API_PREFIX dipakai oleh server-side API client untuk memanggil backend.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Login menyimpan JWT ke cookie admin_token (httpOnly).
 
-## Learn More
+## Development
 
-To learn more about Next.js, take a look at the following resources:
+Install deps:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+bun install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Run dev server:
 
-## Deploy on Vercel
+```bash
+bun run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Open:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [http://localhost:3000]
+
+## Production Build (local)
+
+```bash
+bun run build
+bun run start
+```
+
+Docker
+Build image:
+
+```bash
+docker build -t smarthome-admin:latest .
+```
+
+Run container:
+
+```bash
+docker run --rm -p 3000:3000 \
+ -e NEXT_PUBLIC_APP_NAME="Smart Home Admin" \
+ -e BACKEND_BASE_URL="http://host.docker.internal:3000" \
+ -e BACKEND_API_PREFIX="/routes/v1" \
+ smarthome-admin:latest
+```
+
+Linux: host.docker.internal kadang perlu diaktifkan atau ganti dengan IP host network.
+
+## Docker Compose
+
+```bash
+docker compose up --build
+```
+
+## Project Structure (ringkas)
+
+```tree
+app/
+  (auth)/login
+  (admin)/dashboard
+  api/auth/(login|logout)
+lib/
+  api/(client,endpoints,queries)
+middleware.ts (auth guard)
+```
+
+## Contributing
+
+- Branch: main (stable) + dev (optional)
+
+- CI: lint + build via GitHub Actions
+
+## License
+
+Internal / TBD
+
+### `.env.example`
+
+Buat file `.env.example`:
+
+```bash
+NEXT_PUBLIC_APP_NAME="Smart Home Admin"
+BACKEND_BASE_URL="http://localhost:3000"
+BACKEND_API_PREFIX="/routes/v1"
+Dan pastikan .env.local masuk .gitignore (biasanya Next template sudah ada). Kalau belum, tambahkan:
+
+.env.local
+.env.*.local
+```

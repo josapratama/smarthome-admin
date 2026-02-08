@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.1.38"
+
+      - name: Install deps
+        run: bun install --frozen-lockfile
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Build
+        run: bun run build
+        env:
+          NODE_ENV: production
+          NEXT_PUBLIC_APP_NAME: "Smart Home Admin"
+          BACKEND_BASE_URL: "http://localhost:3000"
+          BACKEND_API_PREFIX: "/routes/v1"

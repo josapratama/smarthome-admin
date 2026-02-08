@@ -1,0 +1,11 @@
+services:
+  smarthome-admin:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_APP_NAME: "Smart Home Admin"
+      BACKEND_BASE_URL: "http://host.docker.internal:3000"
+      BACKEND_API_PREFIX: "/routes/v1"

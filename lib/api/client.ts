@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-class ApiError extends Error {
+export class ApiError extends Error {
   status: number;
   payload: unknown;
   constructor(status: number, payload: unknown) {
@@ -18,6 +18,7 @@ function getBaseUrl() {
 
 function getApiPrefix() {
   const p = process.env.BACKEND_API_PREFIX ?? "";
+  if (!p) return "";
   return p.startsWith("/") ? p : `/${p}`;
 }
 
@@ -25,7 +26,7 @@ export async function apiFetch<T>(
   path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const cookieStore = await cookies(); // ✅ penting
+  const cookieStore = await cookies();
   const token = cookieStore.get("admin_token")?.value;
 
   const res = await fetch(`${getBaseUrl()}${getApiPrefix()}${path}`, {
@@ -46,5 +47,3 @@ export async function apiFetch<T>(
   if (!res.ok) throw new ApiError(res.status, payload);
   return payload as T;
 }
-
-export { ApiError };

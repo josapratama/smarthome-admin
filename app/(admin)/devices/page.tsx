@@ -5,6 +5,23 @@ export default async function DevicesPage() {
   const res = await listDevices();
   const devices = res.data ?? [];
 
+  function StatusBadge({ online }: { online: boolean }) {
+    return (
+      <span
+        className={`inline-flex rounded-full px-2 py-0.5 text-xs ${online ? "bg-green-100 text-green-800" : "bg-zinc-100 text-zinc-700"}`}
+      >
+        {online ? "ONLINE" : "OFFLINE"}
+      </span>
+    );
+  }
+
+  function formatLastSeen(v?: string | null) {
+    if (!v) return "-";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return v;
+    return d.toLocaleString();
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -27,6 +44,7 @@ export default async function DevicesPage() {
                   <th className="py-2 pr-4">Name</th>
                   <th className="py-2 pr-4">Status</th>
                   <th className="py-2 pr-4">Last seen</th>
+                  <th className="py-2 pr-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -35,9 +53,19 @@ export default async function DevicesPage() {
                     <td className="py-2 pr-4">{d.id}</td>
                     <td className="py-2 pr-4">{d.name ?? "-"}</td>
                     <td className="py-2 pr-4">
-                      {d.status ? "ONLINE" : "OFFLINE"}
+                      <StatusBadge online={!!d.status} />
                     </td>
-                    <td className="py-2 pr-4">{d.lastSeenAt ?? "-"}</td>
+                    <td className="py-2 pr-4">
+                      {formatLastSeen(d.lastSeenAt)}
+                    </td>
+                    <td className="py-2 pr-4">
+                      <a
+                        className="underline text-muted-foreground hover:text-foreground"
+                        href={`/ota?deviceId=${d.id}`}
+                      >
+                        View OTA
+                      </a>
+                    </td>
                   </tr>
                 ))}
                 {devices.length === 0 ? (

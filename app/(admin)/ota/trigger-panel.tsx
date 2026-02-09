@@ -1,10 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
 
 type Device = { id: number; name?: string | null; status?: boolean | null };
 type Release = { id: number; version: string };
+
 type OtaJob = {
   id: number;
   deviceId: number;
@@ -22,6 +24,20 @@ function getMsg(payload: unknown): string | null {
   return null;
 }
 
+async function fetchJobs(deviceId: number): Promise<OtaJob[]> {
+  const res = await fetch(`/api/ota/devices/${deviceId}/jobs`, {
+    cache: "no-store",
+  });
+  const payload: unknown = await res.json().catch(() => null);
+
+  if (!res.ok) {
+    throw new Error(getMsg(payload) ?? `Failed load jobs (HTTP ${res.status})`);
+  }
+
+  const data = (payload as Record<string, unknown>)?.data;
+  return (Array.isArray(data) ? data : []) as OtaJob[];
+}
+
 export function OtaTriggerPanel({
   devices,
   releases,
@@ -29,48 +45,32 @@ export function OtaTriggerPanel({
   devices: Device[];
   releases: Release[];
 }) {
+  // default selection: first item
   const [deviceId, setDeviceId] = useState<number>(() => devices[0]?.id ?? 0);
   const [releaseId, setReleaseId] = useState<number>(
     () => releases[0]?.id ?? 0,
   );
-  const [jobs, setJobs] = useState<OtaJob[]>([]);
+
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
 
   const canSubmit = deviceId > 0 && releaseId > 0;
 
-  async function loadJobs(did = deviceId) {
-    if (!did) return;
-    const res = await fetch(`/api/ota/devices/${did}/jobs`, {
-      cache: "no-store",
-    });
-    const payload = await res.json().catch(() => null);
-    if (!res.ok)
-      throw new Error(
-        getMsg(payload) ?? `Failed load jobs (HTTP ${res.status})`,
-      );
-    setJobs((payload?.data ?? []) as OtaJob[]);
-  }
+  // ✅ TanStack Query polling OTA jobs
+  const jobsQuery = useQuery({
+    queryKey: ["ota-jobs", deviceId],
+    enabled: deviceId > 0,
+    queryFn: () => fetchJobs(deviceId),
+    refetchInterval: 5000,
+    staleTime: 0,
+  });
 
-  // polling tiap 5 detik (simple)
+  // nice: clear messages when switching device/release
   useEffect(() => {
-    if (!deviceId) return;
-    let t: number | undefined;
-
-    const tick = async () => {
-      try {
-        await loadJobs(deviceId);
-      } catch {}
-      t = window.setTimeout(tick, 5000);
-    };
-
-    tick();
-    return () => {
-      if (t) window.clearTimeout(t);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId]);
+    setErr(null);
+    setOk(null);
+  }, [deviceId, releaseId]);
 
   async function trigger() {
     setErr(null);
@@ -85,7 +85,7 @@ export function OtaTriggerPanel({
         body: JSON.stringify({ deviceId, releaseId }),
       });
 
-      const payload = await res.json().catch(() => null);
+      const payload: unknown = await res.json().catch(() => null);
 
       if (!res.ok) {
         throw new Error(
@@ -94,7 +94,7 @@ export function OtaTriggerPanel({
       }
 
       setOk("OTA triggered.");
-      await loadJobs(deviceId);
+      await jobsQuery.refetch();
     } catch (e: unknown) {
       setErr(
         e instanceof Error
@@ -105,6 +105,8 @@ export function OtaTriggerPanel({
       setLoading(false);
     }
   }
+
+  const jobs = jobsQuery.data ?? [];
 
   return (
     <div className="space-y-4 rounded-lg border p-4">
@@ -150,6 +152,12 @@ export function OtaTriggerPanel({
       {err ? <div className="text-sm text-red-600">{err}</div> : null}
       {ok ? <div className="text-sm text-green-600">{ok}</div> : null}
 
+      {jobsQuery.isError ? (
+        <div className="text-sm text-red-600">
+          {(jobsQuery.error as Error)?.message ?? "Failed to load OTA jobs."}
+        </div>
+      ) : null}
+
       <div className="overflow-auto">
         <table className="w-full text-sm">
           <thead className="text-left text-muted-foreground">
@@ -163,13 +171,29 @@ export function OtaTriggerPanel({
           <tbody>
             {jobs.map((j) => (
               <tr key={j.id} className="border-b">
-                <td className="py-2 pr-4">#{j.id}</td>
+                <td className="py-2 pr-4">
+                  <a
+                    className="underline text-muted-foreground hover:text-foreground"
+                    href={`/ota/jobs/${j.id}`}
+                  >
+                    #{j.id}
+                  </a>
+                </td>
                 <td className="py-2 pr-4">{j.status}</td>
                 <td className="py-2 pr-4">{j.progress ?? "-"}</td>
                 <td className="py-2 pr-4">{j.lastError ?? "-"}</td>
               </tr>
             ))}
-            {jobs.length === 0 ? (
+
+            {jobsQuery.isLoading ? (
+              <tr>
+                <td colSpan={4} className="py-6 text-muted-foreground">
+                  Loading OTA jobs...
+                </td>
+              </tr>
+            ) : null}
+
+            {!jobsQuery.isLoading && jobs.length === 0 ? (
               <tr>
                 <td colSpan={4} className="py-6 text-muted-foreground">
                   No OTA jobs for this device.

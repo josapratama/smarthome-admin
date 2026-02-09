@@ -1,15 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getErrorMessage } from "@/lib/utils";
+
+function getErrorMessage(payload: unknown): string | null {
+  if (!payload || typeof payload !== "object") return null;
+  const rec = payload as Record<string, unknown>;
+  if (typeof rec.message === "string") return rec.message;
+  if (rec.error && typeof rec.error === "object") {
+    const errRec = rec.error as Record<string, unknown>;
+    if (typeof errRec.message === "string") return errRec.message;
+  }
+  return null;
+}
 
 export function UploadFirmwareForm() {
+  const router = useRouter();
+
+  const [platform, setPlatform] = useState("esp32");
   const [version, setVersion] = useState("");
   const [notes, setNotes] = useState("");
   const [file, setFile] = useState<File | null>(null);
+
   const [err, setErr] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -19,10 +34,13 @@ export function UploadFirmwareForm() {
     setErr(null);
     setOk(null);
 
+    if (!platform.trim())
+      return setErr("Platform wajib diisi (contoh: esp32).");
     if (!version.trim()) return setErr("Version wajib diisi.");
-    if (!file) return setErr("File firmware (.bin) wajib dipilih.");
+    if (!file) return setErr("File firmware wajib dipilih.");
 
     const fd = new FormData();
+    fd.append("platform", platform.trim());
     fd.append("version", version.trim());
     if (notes.trim()) fd.append("notes", notes.trim());
     fd.append("file", file);
@@ -33,19 +51,29 @@ export function UploadFirmwareForm() {
         method: "POST",
         body: fd,
       });
+
       if (!res.ok) {
-        const payload: unknown = await res.json().catch(() => null);
+        const ct = res.headers.get("content-type") ?? "";
+        const payload: unknown = ct.includes("application/json")
+          ? await res.json().catch(() => null)
+          : await res.text().catch(() => null);
+
         const msg =
-          getErrorMessage(payload) ?? `Upload gagal (HTTP ${res.status})`;
+          typeof payload === "string"
+            ? payload
+            : (getErrorMessage(payload) ?? `Upload gagal (HTTP ${res.status})`);
+
         throw new Error(msg);
       }
 
       setOk("Upload berhasil.");
+      setPlatform("esp32");
       setVersion("");
       setNotes("");
       setFile(null);
-      // optional: refresh list
-      // window.location.reload();
+
+      // ✅ refresh server component list releases
+      router.refresh();
     } catch (e: unknown) {
       setErr(
         e instanceof Error ? e.message || "Upload gagal." : "Upload gagal.",
@@ -57,6 +85,16 @@ export function UploadFirmwareForm() {
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="platform">Platform</Label>
+        <Input
+          id="platform"
+          value={platform}
+          onChange={(e) => setPlatform(e.target.value)}
+          placeholder="esp32"
+        />
+      </div>
+
       <div className="space-y-2">
         <Label htmlFor="version">Version</Label>
         <Input
@@ -78,16 +116,13 @@ export function UploadFirmwareForm() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="file">Firmware binary</Label>
+        <Label htmlFor="file">Firmware file</Label>
         <Input
           id="file"
           type="file"
           accept=".bin,application/octet-stream"
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
         />
-        <div className="text-xs text-muted-foreground">
-          Upload file firmware (.bin)
-        </div>
       </div>
 
       {err ? <div className="text-sm text-red-600">{err}</div> : null}

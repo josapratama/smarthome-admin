@@ -29,7 +29,7 @@ export const API = {
 
   firmware: {
     releases: "/firmware/releases",
-    upload: "/firmware/releases", // jika upload via POST ke releases; sesuaikan kalau beda
+    upload: "/firmware/releases",
     download: (releaseId: number) => `/firmware/releases/${releaseId}/download`,
   },
 

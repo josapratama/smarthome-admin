@@ -36,10 +36,18 @@ export default async function FirmwarePage() {
                   key={r.id}
                   className="flex items-center justify-between border-b py-2"
                 >
-                  <span className="font-medium">{r.version}</span>
-                  <span className="text-muted-foreground">
-                    {r.createdAt ?? "-"}
-                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{r.version}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {r.createdAt ?? "-"}
+                    </span>
+                  </div>
+                  <a
+                    className="text-sm underline text-muted-foreground hover:text-foreground"
+                    href={`/api/firmware/releases/${r.id}/download`}
+                  >
+                    Download
+                  </a>
                 </li>
               ))}
               {releases.length === 0 ? (

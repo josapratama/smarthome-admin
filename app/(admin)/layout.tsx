@@ -1,5 +1,6 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { Topbar } from "@/components/topbar";
+import AdminProviders from "./providers";
 
 export default function AdminLayout({
   children,
@@ -11,7 +12,9 @@ export default function AdminLayout({
       <AppSidebar />
       <div className="flex flex-1 flex-col">
         <Topbar />
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-6">
+          <AdminProviders>{children}</AdminProviders>
+        </main>
       </div>
     </div>
   );

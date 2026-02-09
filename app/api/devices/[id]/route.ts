@@ -11,7 +11,6 @@ export async function GET(
     return NextResponse.json({ message: "Invalid job id" }, { status: 400 });
   }
 
-  // backend: GET /ota/jobs/{id}
   const data = await apiFetch(API.ota.jobDetail(jobId), { method: "GET" });
   return NextResponse.json(data);
 }

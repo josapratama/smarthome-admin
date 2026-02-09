@@ -1,6 +1,6 @@
-import { getOverview } from "@/lib/api/queries";
-import { ApiError } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiError } from "@/lib/api/https";
+import { getOverview } from "@/lib/api/server";
 
 function Stat({ title, value }: { title: string; value: number }) {
   return (

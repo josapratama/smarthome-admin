@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import { apiFetch, ApiError } from "@/lib/api/client";
 import { API } from "@/lib/api/endpoints";
+import { ApiError } from "@/lib/api/https";
+import { apiFetch } from "@/lib/api/client";
 
 export async function GET(
   _: Request,

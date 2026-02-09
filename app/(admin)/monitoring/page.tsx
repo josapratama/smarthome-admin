@@ -1,6 +1,6 @@
-import { listCommands } from "@/lib/api/queries";
-import { ApiError } from "@/lib/api/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApiError } from "@/lib/api/https";
+import { listCommands } from "@/lib/api/server";
 
 type ListCommandsResponse = Awaited<ReturnType<typeof listCommands>>;
 type CommandItem = NonNullable<ListCommandsResponse["data"]>[number];

@@ -14,7 +14,7 @@ export default async function AdminLayout({
   if (!token) redirect("/login");
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/20">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/20">
       <div className="flex">
         <Sidebar />
         <div className="flex min-w-0 flex-1 flex-col">

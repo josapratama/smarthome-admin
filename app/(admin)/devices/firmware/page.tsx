@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { listFirmwareReleases } from "@/lib/api/server";
+import { listFirmwareReleases } from "@/lib/api/servers";
 
 export default async function FirmwarePage() {
   const res = await listFirmwareReleases();

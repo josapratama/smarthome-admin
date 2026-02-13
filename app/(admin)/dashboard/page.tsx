@@ -1,9 +1,10 @@
-// app/(admin)/dashboard/page.tsx
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
 import { getOverview } from "@/lib/api/server";
+
+type OverviewData = Awaited<ReturnType<typeof getOverview>>;
 
 function Stat({ title, value }: { title: string; value: number }) {
   return (
@@ -18,6 +19,16 @@ function Stat({ title, value }: { title: string; value: number }) {
   );
 }
 
+function extractMsg(payload: unknown): string | null {
+  if (typeof payload === "string") return payload;
+  if (!payload || typeof payload !== "object") return null;
+
+  const p = payload as Record<string, unknown>;
+  if (typeof p.message === "string") return p.message;
+  if (typeof p.error === "string") return p.error; // backend kamu: { error: "UNAUTHORIZED" }
+  return null;
+}
+
 function ErrorView({
   status,
   payload,
@@ -25,12 +36,7 @@ function ErrorView({
   status?: number;
   payload?: unknown;
 }) {
-  const msg =
-    typeof payload === "string"
-      ? payload
-      : payload && typeof payload === "object" && "message" in payload
-        ? String((payload as { message?: unknown }).message)
-        : null;
+  const msg = extractMsg(payload);
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
@@ -65,7 +71,7 @@ function ErrorView({
 }
 
 export default async function DashboardPage() {
-  let data: Awaited<ReturnType<typeof getOverview>> | null = null;
+  let data: OverviewData | null = null;
   let error: { status?: number; payload?: unknown } | null = null;
 
   try {
@@ -78,11 +84,9 @@ export default async function DashboardPage() {
     }
   }
 
-  if (error) {
-    return <ErrorView status={error.status} payload={error.payload} />;
-  }
+  if (error) return <ErrorView status={error.status} payload={error.payload} />;
+  if (!data) return <ErrorView />;
 
-  // JSX DI LUAR try/catch ✅
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
@@ -93,30 +97,30 @@ export default async function DashboardPage() {
           </p>
         </div>
 
-        {typeof data!.pendingInvitesCount === "number" ? (
+        {typeof data.pendingInvitesCount === "number" ? (
           <div className="inline-flex items-center gap-2 rounded-full border bg-muted/30 px-3 py-1 text-sm">
             <span className="text-muted-foreground">Pending invites</span>
-            <span className="font-semibold">{data!.pendingInvitesCount}</span>
+            <span className="font-semibold">{data.pendingInvitesCount}</span>
           </div>
         ) : null}
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Stat title="Users" value={data!.users} />
-        <Stat title="Homes" value={data!.homes} />
-        <Stat title="Devices" value={data!.devices} />
-        <Stat title="Online" value={data!.onlineDevices} />
-        <Stat title="Offline" value={data!.offlineDevices} />
+        <Stat title="Users" value={data.users} />
+        <Stat title="Homes" value={data.homes} />
+        <Stat title="Devices" value={data.devices} />
+        <Stat title="Online" value={data.onlineDevices} />
+        <Stat title="Offline" value={data.offlineDevices} />
       </div>
 
-      {Array.isArray(data!.homesList) && data!.homesList.length > 0 ? (
+      {Array.isArray(data.homesList) && data.homesList.length > 0 ? (
         <Card className="rounded-2xl shadow-sm">
           <CardHeader>
             <CardTitle className="text-base">My Homes</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
-              {data!.homesList.slice(0, 6).map((h) => (
+              {data.homesList.slice(0, 6).map((h) => (
                 <div key={h.id} className="rounded-xl border p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>

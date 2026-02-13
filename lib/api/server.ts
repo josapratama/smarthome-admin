@@ -1,98 +1,194 @@
-import { apiFetchServer, apiUploadServer } from "./client.server";
-import { API } from "./endpoints";
+import { cookies, headers } from "next/headers";
+import { ApiError, pickMessage } from "./errors";
+import { readPayload } from "./payload";
 
-export type OverviewResponse = {
+export type FetchRawResult<T = unknown> = {
+  res: Response;
+  payload: T | null;
+};
+
+function normalizeToken(token?: string | null) {
+  if (!token) return null;
+  let t = token.replace(/^"+|"+$/g, ""); // buang quote kalau ada
+  t = t.replace(/^Bearer\s+/i, ""); // buang Bearer kalau kebawa ke cookie
+  return t;
+}
+
+// =========================
+// BACKEND URL builder (1 sumber)
+// =========================
+function getBackendBase() {
+  const base = process.env.BACKEND_BASE_URL?.trim();
+  if (!base) throw new Error("Missing BACKEND_BASE_URL");
+  return base.replace(/\/+$/, "");
+}
+
+function getBackendPrefix() {
+  const raw = (process.env.BACKEND_API_PREFIX ?? "").trim();
+  if (!raw) return "";
+  return `/${raw}`.replace(/^\/+/, "/").replace(/\/+$/, "");
+}
+
+function joinBackendUrl(path: string) {
+  const base = getBackendBase();
+  const prefix = getBackendPrefix();
+  const p = path.startsWith("/") ? path : `/${path}`;
+  return `${base}${prefix}${p}`;
+}
+
+type BackendAuthMode =
+  | { auth: "none" }
+  | { auth: "admin_cookie" }
+  | { auth: "token"; token: string };
+
+function shouldSetJsonContentType(body: unknown) {
+  // jangan set content-type kalau FormData
+  return !(typeof FormData !== "undefined" && body instanceof FormData);
+}
+
+function toHeaders(initHeaders?: HeadersInit) {
+  return new Headers(initHeaders ?? {});
+}
+
+// =========================
+// BACKEND fetch (RAW + THROW)
+// =========================
+export async function backendFetchRaw<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+  auth: BackendAuthMode = { auth: "admin_cookie" },
+): Promise<FetchRawResult<T>> {
+  const url = joinBackendUrl(path);
+
+  const h = toHeaders(init.headers);
+
+  // inject auth
+  if (auth.auth === "token") {
+    h.set("authorization", `Bearer ${normalizeToken(auth.token) ?? ""}`);
+  } else if (auth.auth === "admin_cookie") {
+    const jar = await cookies();
+    const token = normalizeToken(jar.get("admin_token")?.value);
+    if (token) h.set("authorization", `Bearer ${token}`);
+  }
+
+  // default JSON content-type (kecuali FormData)
+  if (!h.has("content-type") && shouldSetJsonContentType(init.body)) {
+    h.set("content-type", "application/json");
+  }
+
+  const res = await fetch(url, { ...init, headers: h, cache: "no-store" });
+  const payload = (await readPayload(res)) as T | null;
+
+  return { res, payload };
+}
+
+export async function backendFetch<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+  auth: BackendAuthMode = { auth: "admin_cookie" },
+): Promise<T> {
+  const { res, payload } = await backendFetchRaw<T>(path, init, auth);
+
+  if (!res.ok) {
+    throw new ApiError(res.status, pickMessage(payload, res.status), payload);
+  }
+
+  return payload as T;
+}
+
+export async function backendUpload<T = unknown>(
+  path: string,
+  form: FormData,
+  auth: BackendAuthMode = { auth: "admin_cookie" },
+): Promise<T> {
+  const { res, payload } = await backendFetchRaw<T>(
+    path,
+    { method: "POST", body: form },
+    auth,
+  );
+
+  if (!res.ok) {
+    throw new ApiError(res.status, pickMessage(payload, res.status), payload);
+  }
+
+  return payload as T;
+}
+
+// =========================
+// NEXT internal fetch (RAW + THROW)
+// dipakai kalau kamu mau call /api/... (Next route) dari Server Component
+// =========================
+async function getAppOrigin() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "http";
+  if (!host) throw new Error("Missing host header");
+  return `${proto}://${host}`;
+}
+
+async function getCookieHeaderFromJar() {
+  const jar = await cookies();
+  const all = jar.getAll();
+  if (!all.length) return "";
+  return all.map(({ name, value }) => `${name}=${value}`).join("; ");
+}
+
+export async function appFetchRaw<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+): Promise<FetchRawResult<T>> {
+  const origin = await getAppOrigin();
+  const p = path.startsWith("/") ? path : `/${path}`;
+  const url = `${origin}${p}`;
+
+  const h = toHeaders(init.headers);
+
+  // forward cookies supaya route handler bisa baca admin_token
+  if (!h.has("cookie")) {
+    const cookieHeader = await getCookieHeaderFromJar();
+    if (cookieHeader) h.set("cookie", cookieHeader);
+  }
+
+  if (!h.has("content-type") && shouldSetJsonContentType(init.body)) {
+    h.set("content-type", "application/json");
+  }
+
+  const res = await fetch(url, { ...init, headers: h, cache: "no-store" });
+  const payload = (await readPayload(res)) as T | null;
+  return { res, payload };
+}
+
+export async function appFetch<T = unknown>(
+  path: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const { res, payload } = await appFetchRaw<T>(path, init);
+  if (!res.ok) {
+    throw new ApiError(res.status, pickMessage(payload, res.status), payload);
+  }
+  return payload as T;
+}
+
+export type OverviewData = {
   users: number;
   homes: number;
   devices: number;
   onlineDevices: number;
   offlineDevices: number;
-  pendingInvitesCount?: number;
-  homesList?: Array<{
+  pendingInvitesCount: number;
+  homesList: Array<{
     id: number;
     name: string;
-    city?: string | null;
+    city: string | null;
+    updatedAt: string;
     roleInHome: string;
     devicesOnline: number;
     devicesOffline: number;
     openAlarms: number;
-    updatedAt: string;
   }>;
 };
 
-export async function getOverview() {
-  // ini memanggil NEXT API (bukan backend)
-  return apiFetchServer<OverviewResponse>(API.admin.overview, {
-    method: "GET",
-  });
-}
-
-/** Devices */
-export type DeviceListItem = {
-  id: number;
-  name?: string | null;
-  status?: boolean | null; // kalau backend pakai status online/offline
-  lastSeenAt?: string | null;
-  homeId?: number | null;
-};
-
-export async function listDevices() {
-  return apiFetchServer<{ data: DeviceListItem[] }>(API.devices.list);
-}
-
-/** Firmware */
-export type FirmwareRelease = {
-  id: number;
-  version: string;
-  createdAt?: string;
-};
-
-export async function listFirmwareReleases() {
-  return apiFetchServer<{ data: FirmwareRelease[] }>(API.firmware.releases);
-}
-
-export type UploadFirmwareResponse = {
-  data?: unknown;
-  message?: string;
-};
-
-export async function uploadFirmwareRelease(input: {
-  version: string;
-  notes?: string;
-  file: File;
-}) {
-  const form = new FormData();
-  form.append("version", input.version);
-  if (input.notes) form.append("notes", input.notes);
-  form.append("file", input.file);
-
-  return apiUploadServer<UploadFirmwareResponse>(API.firmware.upload, form);
-}
-
-/** OTA */
-export type ServerOtaJob = {
-  id: number;
-  deviceId: number;
-  status: string;
-  createdAt?: string;
-};
-
-export async function listOtaJobsByDevice(deviceId: number) {
-  return apiFetchServer<{ data: ServerOtaJob[] }>(
-    API.ota.jobsByDevice(deviceId),
-  );
-}
-
-/** Monitoring */
-export type CommandHistoryItem = {
-  id: number;
-  deviceId: number;
-  status: string;
-  createdAt?: string;
-};
-
-export async function listCommands() {
-  return apiFetchServer<{ data: CommandHistoryItem[] }>(
-    API.monitoring.commands,
-  );
+export async function getOverview(): Promise<OverviewData> {
+  // Panggil Next route internal, bukan backend langsung
+  return appFetch<OverviewData>("/api/admin/overview", { method: "GET" });
 }

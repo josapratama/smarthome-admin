@@ -1,55 +1,58 @@
 import { NextResponse } from "next/server";
+import { setAuthCookies } from "@/lib/server/auth-cookies";
+import { upstreamFetch } from "@/lib/server/upstream";
 
 export async function POST(req: Request) {
-  const body = await req.json().catch(() => ({}));
-
-  const base = process.env.BACKEND_BASE_URL?.replace(/\/$/, "");
-  const prefixRaw = process.env.BACKEND_API_PREFIX ?? "";
-  const prefix = prefixRaw
-    ? prefixRaw.startsWith("/")
-      ? prefixRaw
-      : `/${prefixRaw}`
-    : "";
-
-  if (!base)
+  const body = await req.json().catch(() => null);
+  if (!body?.username || !body?.password) {
     return NextResponse.json(
-      { message: "Missing BACKEND_BASE_URL" },
-      { status: 500 },
+      { message: "username dan password wajib" },
+      { status: 400 },
     );
+  }
 
-  // OpenAPI: POST /api/v1/auth/login
-  const upstream = await fetch(`${base}${prefix}/auth/login`, {
+  // teruskan ke backend Hono: /api/v1/login
+  const { res, payload } = await upstreamFetch("/login", {
     method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body), // expects { identifier, password }
+    body: JSON.stringify({
+      username: String(body.username),
+      password: String(body.password),
+    }),
   });
 
-  const payload = await upstream.json().catch(() => null);
-
-  if (!upstream.ok) {
-    return NextResponse.json(payload ?? { message: "Login failed" }, {
-      status: upstream.status,
+  if (!res.ok) {
+    // backend kamu biasanya balikin {error: "..."} atau {data:...}
+    return NextResponse.json(payload ?? { message: "Login gagal" }, {
+      status: res.status,
     });
   }
 
-  // OpenAPI: AuthLoginResponse -> payload.data.accessToken
-  const token = payload?.data?.accessToken;
-  if (!token) {
+  // backend handlerLogin: { data: { accessToken, refreshToken, sessionId, user } }
+  const data = payload?.data;
+  if (!data?.accessToken) {
     return NextResponse.json(
-      { message: "Missing accessToken from backend" },
+      { message: "Backend tidak mengirim accessToken" },
       { status: 502 },
     );
   }
 
-  const res = NextResponse.json({
-    ok: true,
-    user: payload?.data?.user ?? null,
-  });
-  res.cookies.set("admin_token", token, {
+  // simpan cookie httpOnly untuk FE
+  await setAuthCookies(data.accessToken, data.refreshToken);
+
+  // simpan sessionId juga (opsional, tapi refresh BE kamu butuh sessionId)
+  // RefreshBody backend: { sessionId, refreshToken }
+  // Jadi FE perlu simpan sessionId di cookie httpOnly juga.
+  const resp = NextResponse.json(
+    { data: { user: data.user } },
+    { status: 200 },
+  );
+
+  resp.cookies.set("admin_session_id", String(data.sessionId), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
   });
-  return res;
+
+  return resp;
 }

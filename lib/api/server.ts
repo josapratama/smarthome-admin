@@ -1,30 +1,43 @@
-import { apiFetch, apiUpload } from "./client";
+import { apiFetchServer, apiUploadServer } from "./client.server";
 import { API } from "./endpoints";
 
-/** Dashboard */
 export type OverviewResponse = {
   users: number;
   homes: number;
   devices: number;
   onlineDevices: number;
   offlineDevices: number;
+  pendingInvitesCount?: number;
+  homesList?: Array<{
+    id: number;
+    name: string;
+    city?: string | null;
+    roleInHome: string;
+    devicesOnline: number;
+    devicesOffline: number;
+    openAlarms: number;
+    updatedAt: string;
+  }>;
 };
 
 export async function getOverview() {
-  return apiFetch<OverviewResponse>(API.admin.overview);
+  // ini memanggil NEXT API (bukan backend)
+  return apiFetchServer<OverviewResponse>(API.admin.overview, {
+    method: "GET",
+  });
 }
 
 /** Devices */
 export type DeviceListItem = {
   id: number;
   name?: string | null;
-  status?: boolean | null; // online/offline (kalau backend pakai ini)
+  status?: boolean | null; // kalau backend pakai status online/offline
   lastSeenAt?: string | null;
   homeId?: number | null;
 };
 
 export async function listDevices() {
-  return apiFetch<{ data: DeviceListItem[] }>(API.devices.list);
+  return apiFetchServer<{ data: DeviceListItem[] }>(API.devices.list);
 }
 
 /** Firmware */
@@ -35,7 +48,7 @@ export type FirmwareRelease = {
 };
 
 export async function listFirmwareReleases() {
-  return apiFetch<{ data: FirmwareRelease[] }>(API.firmware.releases);
+  return apiFetchServer<{ data: FirmwareRelease[] }>(API.firmware.releases);
 }
 
 export type UploadFirmwareResponse = {
@@ -53,7 +66,7 @@ export async function uploadFirmwareRelease(input: {
   if (input.notes) form.append("notes", input.notes);
   form.append("file", input.file);
 
-  return apiUpload<UploadFirmwareResponse>(API.firmware.upload, form);
+  return apiUploadServer<UploadFirmwareResponse>(API.firmware.upload, form);
 }
 
 /** OTA */
@@ -65,7 +78,9 @@ export type ServerOtaJob = {
 };
 
 export async function listOtaJobsByDevice(deviceId: number) {
-  return apiFetch<{ data: ServerOtaJob[] }>(API.ota.jobsByDevice(deviceId));
+  return apiFetchServer<{ data: ServerOtaJob[] }>(
+    API.ota.jobsByDevice(deviceId),
+  );
 }
 
 /** Monitoring */
@@ -77,5 +92,7 @@ export type CommandHistoryItem = {
 };
 
 export async function listCommands() {
-  return apiFetch<{ data: CommandHistoryItem[] }>(API.monitoring.commands);
+  return apiFetchServer<{ data: CommandHistoryItem[] }>(
+    API.monitoring.commands,
+  );
 }

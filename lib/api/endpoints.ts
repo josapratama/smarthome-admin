@@ -1,49 +1,45 @@
-// lib/api/endpoints.ts
-
-// Konvensi:
-// - Semua endpoint dikelompokkan per domain
-// - Tidak ada top-level endpoint yang "nyempil"
-// - Yang dynamic pakai function
-
 export const API = {
   auth: {
-    login: "/auth/login",
-    me: "/auth/me",
+    login: "/api/auth/login",
+    logout: "/api/auth/logout",
+    refresh: "/api/auth/refresh",
+    me: "/api/auth/me",
+    changePassword: "/api/auth/change-password",
+    forgotPassword: "/api/auth/forgot-password",
+    resetPassword: "/api/auth/reset-password",
   },
 
   admin: {
-    users: "/admin/users",
-    overview: "/admin/overview", // ✅ Opsi B: endpoint overview real di backend
+    overview: "/api/admin/overview",
+    users: "/api/admin/users",
   },
 
   homes: {
-    list: "/homes",
-    detail: (homeId: number) => `/homes/${homeId}`,
-    devices: (homeId: number) => `/homes/${homeId}/devices`,
+    list: "/api/homes",
+    detail: (homeId: number) => `/api/homes/${homeId}`,
+    devices: (homeId: number) => `/api/homes/${homeId}/devices`,
   },
 
   devices: {
-    list: "/devices",
-    detail: (deviceId: number) => `/devices/${deviceId}`,
+    list: "/api/devices",
+    detail: (deviceId: number) => `/api/devices/${deviceId}`,
   },
 
   firmware: {
-    releases: "/firmware/releases",
-    upload: "/firmware/releases",
-    download: (releaseId: number) => `/firmware/releases/${releaseId}/download`,
+    releases: "/api/firmware/releases",
+    upload: "/api/firmware/releases",
+    download: (releaseId: number) =>
+      `/api/firmware/releases/${releaseId}/download`,
   },
 
   ota: {
-    trigger: "/ota/trigger",
-    devices: (deviceId: number) => `/ota/devices/${deviceId}`,
-    jobsByDevice: (deviceId: number) => `/ota/devices/${deviceId}/jobs`,
-    jobDetail: (otaJobId: number) => `/ota/jobs/${otaJobId}`,
+    trigger: "/api/ota/trigger",
+    devices: (deviceId: number) => `/api/ota/devices/${deviceId}`,
+    jobsByDevice: (deviceId: number) => `/api/ota/devices/${deviceId}/jobs`,
+    jobDetail: (otaJobId: number) => `/api/ota/jobs/${otaJobId}`,
   },
 
   monitoring: {
-    commands: "/monitoring/commands",
+    commands: "/api/monitoring/commands",
   },
 } as const;
-
-// Helper optional: bikin pemakaian endpoint makin konsisten
-export const path = <T extends string>(p: T) => p;

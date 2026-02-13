@@ -1,30 +1,24 @@
-import { apiFetchBrowser } from "./client-browser";
+import { apiFetchBrowser } from "./client.browser";
+import { normalizeList } from "./normalize";
 import type { OtaJob } from "./types";
-
-export type ApiListResponse<T> = { data: T };
+import { API } from "./endpoints";
 
 export async function fetchOtaJobsByDevice(deviceId: number) {
-  const payload = await apiFetchBrowser<ApiListResponse<OtaJob[]> | OtaJob[]>(
-    `/api/ota/devices/${deviceId}/jobs`,
+  const payload = await apiFetchBrowser<OtaJob[] | { data: OtaJob[] }>(
+    API.ota.jobsByDevice(deviceId),
     { method: "GET" },
   );
-
-  // support {data: ...} atau array langsung
-  if (Array.isArray(payload)) return payload;
-  return payload.data;
+  return normalizeList(payload);
 }
 
 export async function triggerOta(deviceId: number, releaseId: number) {
-  return apiFetchBrowser<{ ok?: boolean; message?: string }>(
-    `/api/ota/trigger`,
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ deviceId, releaseId }),
-    },
-  );
+  return apiFetchBrowser<{ ok?: boolean; message?: string }>(API.ota.trigger, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ deviceId, releaseId }),
+  });
 }
 
 export async function fetchOtaJobDetail(jobId: number) {
-  return apiFetchBrowser<OtaJob>(`/api/ota/jobs/${jobId}`, { method: "GET" });
+  return apiFetchBrowser<OtaJob>(API.ota.jobDetail(jobId), { method: "GET" });
 }

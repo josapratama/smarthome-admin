@@ -3,7 +3,6 @@ export type Device = {
   name?: string | null;
   serial?: string | null;
 
-  // status fields (sesuaikan mapping di UI kalau backend pakai nama lain)
   online?: boolean | null;
   lastSeen?: string | null; // ISO
 };

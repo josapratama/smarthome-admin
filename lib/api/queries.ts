@@ -1,3 +1,4 @@
+// lib/api/queries.ts
 export const qk = {
   devices: () => ["devices"] as const,
   device: (id: number) => ["devices", id] as const,

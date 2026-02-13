@@ -12,6 +12,7 @@ function getQueryClient() {
     if (!browserQueryClient) browserQueryClient = makeQueryClient();
     return browserQueryClient;
   }
+  // server: selalu instance baru
   return makeQueryClient();
 }
 

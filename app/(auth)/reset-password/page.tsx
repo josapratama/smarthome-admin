@@ -71,7 +71,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-muted/40">
+    <div className="min-h-screen bg-linear-to-b from-background to-muted/40">
       <div className="mx-auto flex min-h-screen max-w-lg items-center justify-center p-6">
         <Card className="w-full rounded-2xl shadow-sm">
           <CardHeader className="space-y-1">

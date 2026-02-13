@@ -1,5 +1,6 @@
 import "server-only";
 import { cookies } from "next/headers";
+import { normalizeToken } from "./helpers";
 
 const ACCESS_COOKIE = "admin_token";
 const REFRESH_COOKIE = "admin_refresh";
@@ -16,9 +17,14 @@ export async function setAuthCookies(
   refreshToken?: string,
 ) {
   const jar = await cookies();
-  jar.set(ACCESS_COOKIE, accessToken, { ...baseCookieOptions });
-  if (refreshToken)
-    jar.set(REFRESH_COOKIE, refreshToken, { ...baseCookieOptions });
+
+  const cleanAccess = normalizeToken(accessToken) ?? accessToken;
+  jar.set(ACCESS_COOKIE, cleanAccess, { ...baseCookieOptions });
+
+  if (refreshToken) {
+    const cleanRefresh = normalizeToken(refreshToken) ?? refreshToken;
+    jar.set(REFRESH_COOKIE, cleanRefresh, { ...baseCookieOptions });
+  }
 }
 
 export async function clearAuthCookies() {
@@ -29,10 +35,10 @@ export async function clearAuthCookies() {
 
 export async function getAccessToken() {
   const jar = await cookies();
-  return jar.get(ACCESS_COOKIE)?.value ?? null;
+  return normalizeToken(jar.get(ACCESS_COOKIE)?.value) ?? null;
 }
 
 export async function getRefreshToken() {
   const jar = await cookies();
-  return jar.get(REFRESH_COOKIE)?.value ?? null;
+  return normalizeToken(jar.get(REFRESH_COOKIE)?.value) ?? null;
 }

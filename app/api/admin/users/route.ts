@@ -1,6 +1,6 @@
+import { getAccessToken } from "@/lib/api/server/auth-cookies";
+import { upstreamFetch } from "@/lib/api/server/upstream";
 import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/server/auth-cookies";
-import { upstreamFetch } from "@/lib/server/upstream";
 
 export async function GET() {
   const token = getAccessToken();

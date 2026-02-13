@@ -36,16 +36,19 @@ export const adminNav: AdminNavItem[] = [
     href: "/homes",
     icon: Home,
     group: "Smart Home",
-    comingSoon: true,
   },
   {
     label: "Rooms",
     href: "/rooms",
     icon: DoorClosed,
     group: "Smart Home",
-    comingSoon: true,
   },
-  { label: "Devices", href: "/devices", icon: Cpu, group: "Smart Home" },
+  {
+    label: "Devices",
+    href: "/devices",
+    icon: Cpu,
+    group: "Smart Home",
+  },
 
   {
     label: "Monitoring",
@@ -58,14 +61,12 @@ export const adminNav: AdminNavItem[] = [
     href: "/commands",
     icon: TerminalSquare,
     group: "Monitoring",
-    comingSoon: true,
   },
   {
     label: "Alarms",
     href: "/alarms",
     icon: Siren,
     group: "Monitoring",
-    comingSoon: true,
   },
 
   {
@@ -73,36 +74,36 @@ export const adminNav: AdminNavItem[] = [
     href: "/ai",
     icon: Sparkles,
     group: "Automation",
-    comingSoon: true,
   },
   {
     label: "Notifications",
     href: "/notifications",
     icon: Bell,
     group: "Automation",
-    comingSoon: true,
   },
   {
     label: "Invites",
     href: "/invites",
     icon: MailPlus,
     group: "Automation",
-    comingSoon: true,
   },
 
-  { label: "Firmware", href: "/firmware", icon: Package, group: "System" },
+  {
+    label: "Firmware",
+    href: "/firmware",
+    icon: Package,
+    group: "System",
+  },
   {
     label: "OTA Jobs",
     href: "/ota",
     icon: CloudDownload,
     group: "System",
-    comingSoon: true,
   },
   {
     label: "Device Config",
     href: "/device-config",
     icon: SlidersHorizontal,
     group: "System",
-    comingSoon: true,
   },
 ];

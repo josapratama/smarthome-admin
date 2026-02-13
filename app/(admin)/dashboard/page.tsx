@@ -2,9 +2,47 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ApiError } from "@/lib/api/errors";
-import { getOverview } from "@/lib/api/server";
+import { backendFetch } from "@/lib/api/server/backend";
+import type { OverviewDTO } from "@/lib/api/dto/overview.dto";
 
-type OverviewData = Awaited<ReturnType<typeof getOverview>>;
+async function getOverview(): Promise<OverviewDTO> {
+  // Call the backend dashboard endpoint directly - this matches what the admin API route calls
+  const p = await backendFetch<{
+    data: {
+      myHomesCount: number;
+      pendingInvitesCount: number;
+      homes: Array<{
+        id: number;
+        name: string;
+        city: string | null;
+        roleInHome: string;
+        devicesOnline: number;
+        devicesOffline: number;
+        openAlarms: number;
+      }>;
+    };
+  }>("/dashboard");
+
+  const homes = Array.isArray(p?.data?.homes) ? p.data.homes : [];
+  const onlineDevices = homes.reduce(
+    (acc, h) => acc + (h.devicesOnline ?? 0),
+    0,
+  );
+  const offlineDevices = homes.reduce(
+    (acc, h) => acc + (h.devicesOffline ?? 0),
+    0,
+  );
+
+  return {
+    users: 0,
+    homes: p.data.myHomesCount ?? homes.length,
+    devices: onlineDevices + offlineDevices,
+    onlineDevices,
+    offlineDevices,
+    pendingInvitesCount: p.data.pendingInvitesCount ?? 0,
+    homesList: homes,
+  };
+}
 
 function Stat({ title, value }: { title: string; value: number }) {
   return (
@@ -25,7 +63,7 @@ function extractMsg(payload: unknown): string | null {
 
   const p = payload as Record<string, unknown>;
   if (typeof p.message === "string") return p.message;
-  if (typeof p.error === "string") return p.error; // backend kamu: { error: "UNAUTHORIZED" }
+  if (typeof p.error === "string") return p.error;
   return null;
 }
 
@@ -71,7 +109,7 @@ function ErrorView({
 }
 
 export default async function DashboardPage() {
-  let data: OverviewData | null = null;
+  let data: OverviewDTO | null = null;
   let error: { status?: number; payload?: unknown } | null = null;
 
   try {

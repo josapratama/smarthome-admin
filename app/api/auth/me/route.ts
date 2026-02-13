@@ -1,16 +1,16 @@
-import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/api/server/auth-cookies";
-import { upstreamFetch } from "@/lib/api/server/upstream";
+import { backendFetch } from "@/lib/api/server/backend";
+import { handleApiError } from "@/lib/api/server/error-handler";
+import type { UserDTO } from "@/lib/api/dto/auth.dto";
 
 export async function GET() {
-  const token = getAccessToken();
-  if (!token)
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-
-  const { res: upstream, payload } = await upstreamFetch("/me", {
-    method: "GET",
-    headers: { authorization: `Bearer ${token}` },
-  });
-
-  return NextResponse.json(payload ?? null, { status: upstream.status });
+  try {
+    const data = await backendFetch<{ data: UserDTO }>(
+      "/api/v1/auth/me",
+      {},
+      { auth: "admin_cookie" },
+    );
+    return Response.json(data);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }

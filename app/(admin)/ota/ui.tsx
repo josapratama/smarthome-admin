@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { qk } from "@/lib/api/queries";
-import { fetchDevices } from "@/lib/api/devices.client";
+import { apiFetchBrowser } from "@/lib/api/client.browser";
+import type { DeviceDTO } from "@/lib/api/dto/devices.dto";
+import type { OtaJobDTO } from "@/lib/api/dto/ota.dto";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +21,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { fetchOtaJobsByDevice, triggerOta } from "@/lib/api/ota.browser";
 
 function statusBadge(online?: boolean | null) {
   if (online === true) return <Badge>Online</Badge>;
@@ -51,7 +52,12 @@ export default function OtaClientPage({
 
   const devicesQ = useQuery({
     queryKey: qk.devices(),
-    queryFn: fetchDevices,
+    queryFn: async () => {
+      const payload = await apiFetchBrowser<{ data: DeviceDTO[] }>(
+        "/api/devices",
+      );
+      return payload.data ?? [];
+    },
     refetchInterval: 5_000, // device status polling
   });
 
@@ -59,7 +65,13 @@ export default function OtaClientPage({
     queryKey: deviceId
       ? qk.otaJobsByDevice(deviceId)
       : ["ota", "device-jobs", "none"],
-    queryFn: () => fetchOtaJobsByDevice(deviceId!),
+    queryFn: async () => {
+      if (!deviceId) return [];
+      const payload = await apiFetchBrowser<{ data: OtaJobDTO[] }>(
+        `/api/ota/jobs?deviceId=${deviceId}`,
+      );
+      return payload.data ?? [];
+    },
     enabled: !!deviceId,
     refetchInterval: 3_000,
   });
@@ -67,8 +79,12 @@ export default function OtaClientPage({
   const triggerM = useMutation({
     mutationFn: async () => {
       if (!deviceId || !releaseId)
-        throw new Error("Device & release wajib dipilih");
-      return triggerOta(deviceId, releaseId);
+        throw new Error("Device & release must be selected");
+      return apiFetchBrowser("/api/ota/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deviceId, firmwareReleaseId: releaseId }),
+      });
     },
     onSuccess: async () => {
       if (deviceId) {
@@ -114,8 +130,8 @@ export default function OtaClientPage({
                 <SelectContent>
                   {(devicesQ.data ?? []).map((d) => (
                     <SelectItem key={d.id} value={String(d.id)}>
-                      #{d.id} {d.name ? `- ${d.name}` : ""} (
-                      {d.serial ?? "no-serial"})
+                      #{d.id} {d.deviceName ? `- ${d.deviceName}` : ""} (
+                      {d.mqttClientId ?? "no-mqtt"})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -124,9 +140,9 @@ export default function OtaClientPage({
 
             {selectedDevice ? (
               <div className="flex items-center gap-2 text-xs">
-                {statusBadge(selectedDevice.online)}
+                {statusBadge(selectedDevice.status)}
                 <span className="text-muted-foreground">
-                  last seen: {fmtLastSeen(selectedDevice.lastSeen)}
+                  last seen: {fmtLastSeen(selectedDevice.lastSeenAt)}
                 </span>
               </div>
             ) : null}
@@ -139,7 +155,7 @@ export default function OtaClientPage({
                ganti bagian ini supaya ambil releases dari endpoint firmware proxy kamu. */}
             <input
               className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-              placeholder="Masukkan releaseId (contoh: 12)"
+              placeholder="Enter releaseId (example: 12)"
               value={releaseId ? String(releaseId) : ""}
               onChange={(e) => {
                 const v = e.target.value.trim();
@@ -148,8 +164,8 @@ export default function OtaClientPage({
               inputMode="numeric"
             />
             <p className="text-xs text-muted-foreground">
-              (Opsional) kalau sudah ada dropdown release di proyekmu,
-              sambungkan ke state <code>releaseId</code>.
+              (Optional) Connect this to your firmware releases dropdown if
+              available.
             </p>
           </div>
 
@@ -181,7 +197,7 @@ export default function OtaClientPage({
         <CardContent className="space-y-3">
           {!deviceId ? (
             <div className="text-sm text-muted-foreground">
-              Pilih device untuk melihat jobs.
+              Select a device to view jobs.
             </div>
           ) : jobsQ.isLoading ? (
             <div className="space-y-2">
@@ -193,7 +209,7 @@ export default function OtaClientPage({
               {(jobsQ.error as Error).message}
             </div>
           ) : (jobsQ.data ?? []).length === 0 ? (
-            <div className="text-sm text-muted-foreground">Belum ada job.</div>
+            <div className="text-sm text-muted-foreground">No jobs yet.</div>
           ) : (
             <div className="divide-y rounded-md border">
               {(jobsQ.data ?? []).map((j) => (
@@ -212,7 +228,7 @@ export default function OtaClientPage({
                       ) : null}
                     </div>
                     <div className="text-xs text-muted-foreground">
-                      device {j.deviceId} • release {j.releaseId}
+                      device {j.deviceId} • release {j.firmwareReleaseId}
                     </div>
                   </div>
 

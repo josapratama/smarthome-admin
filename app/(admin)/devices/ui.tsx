@@ -5,34 +5,42 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { qk } from "@/lib/api/queries";
 import { apiFetchBrowser } from "@/lib/api/client.browser";
-import type { ApiListResponse } from "@/lib/api/normalize";
+import type { DeviceDTO } from "@/lib/api/dto/devices.dto";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-
-type DeviceDTO = {
-  id: number;
-  deviceName: string;
-  roomId: number | null;
-  status: boolean;
-  updatedAt: string;
-  lastSeenAt: string | null;
-  mqttClientId: string | null;
-  deviceKey: string | null;
-  deviceType: string;
-  capabilities: unknown | null;
-  pairedByUserId: number;
-  homeId: number;
-};
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 function statusBadge(status: boolean) {
   return status ? (
     <Badge>Online</Badge>
   ) : (
     <Badge variant="secondary">Offline</Badge>
+  );
+}
+
+function deviceTypeBadge(type: string) {
+  const colors: Record<string, string> = {
+    LIGHT: "bg-yellow-100 text-yellow-800",
+    FAN: "bg-blue-100 text-blue-800",
+    SENSOR_NODE: "bg-green-100 text-green-800",
+    POWER_METER: "bg-purple-100 text-purple-800",
+    OTHER: "bg-gray-100 text-gray-800",
+  };
+
+  return (
+    <Badge variant="outline" className={colors[type] || colors.OTHER}>
+      {type}
+    </Badge>
   );
 }
 
@@ -44,14 +52,21 @@ function fmtDateTime(v?: string | null) {
 
 export default function DevicesClient() {
   const [qText, setQText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [homeIdFilter, setHomeIdFilter] = useState<string>("");
 
   const q = useQuery({
-    queryKey: qk.devices(),
+    queryKey: qk.devices({
+      homeId: homeIdFilter || undefined,
+      status: statusFilter === "all" ? undefined : statusFilter,
+    }),
     queryFn: async () => {
-      const payload = await apiFetchBrowser<ApiListResponse<DeviceDTO[]>>(
-        "/api/devices",
-        { method: "GET" },
-      );
+      const params = new URLSearchParams();
+      if (homeIdFilter) params.set("homeId", homeIdFilter);
+      if (statusFilter !== "all") params.set("status", statusFilter);
+
+      const url = params.toString() ? `/api/devices?${params}` : "/api/devices";
+      const payload = await apiFetchBrowser<{ data: DeviceDTO[] }>(url);
       return payload.data ?? [];
     },
     refetchInterval: 5_000,
@@ -77,7 +92,7 @@ export default function DevicesClient() {
         <div>
           <h1 className="text-2xl font-semibold">Devices</h1>
           <p className="text-sm text-muted-foreground">
-            Daftar device yang bisa kamu akses (owner/member).
+            Manage all devices across your homes.
           </p>
         </div>
 
@@ -85,8 +100,8 @@ export default function DevicesClient() {
           <Input
             value={qText}
             onChange={(e) => setQText(e.target.value)}
-            placeholder="Search: name / type / mqtt / homeId / id"
-            className="sm:w-[360px]"
+            placeholder="Search devices..."
+            className="sm:w-[300px]"
           />
           <Button
             variant="outline"
@@ -98,17 +113,46 @@ export default function DevicesClient() {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Status:</label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="true">Online</SelectItem>
+              <SelectItem value="false">Offline</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium">Home ID:</label>
+          <Input
+            value={homeIdFilter}
+            onChange={(e) => setHomeIdFilter(e.target.value)}
+            placeholder="Filter by home"
+            className="w-32"
+          />
+        </div>
+      </div>
+
       <Card className="rounded-2xl shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Device List</CardTitle>
+          <CardTitle className="text-base">
+            Device List ({filtered.length} devices)
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
           {q.isLoading ? (
             <div className="space-y-2">
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
-              <Skeleton className="h-12 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
+              <Skeleton className="h-16 w-full" />
             </div>
           ) : q.error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -116,7 +160,9 @@ export default function DevicesClient() {
             </div>
           ) : filtered.length === 0 ? (
             <div className="text-sm text-muted-foreground">
-              Tidak ada device.
+              {qText || statusFilter !== "all" || homeIdFilter
+                ? "No devices match your filters."
+                : "No devices found."}
             </div>
           ) : (
             <div className="divide-y rounded-xl border">
@@ -131,28 +177,40 @@ export default function DevicesClient() {
                         #{d.id} • {d.deviceName}
                       </span>
                       {statusBadge(d.status)}
-                      <Badge variant="outline">{d.deviceType}</Badge>
-                      <span className="text-xs text-muted-foreground">
-                        homeId: {d.homeId}
-                      </span>
+                      {deviceTypeBadge(d.deviceType)}
+                      <Badge variant="outline" className="text-xs">
+                        Home: {d.homeId}
+                      </Badge>
+                      {d.roomId && (
+                        <Badge variant="outline" className="text-xs">
+                          Room: {d.roomId}
+                        </Badge>
+                      )}
                     </div>
 
                     <div className="mt-1 text-xs text-muted-foreground">
-                      last seen: {fmtDateTime(d.lastSeenAt)} • updated:{" "}
+                      Last seen: {fmtDateTime(d.lastSeenAt)} • Updated:{" "}
                       {fmtDateTime(d.updatedAt)}
                     </div>
 
                     <div className="mt-1 text-xs text-muted-foreground">
-                      mqtt: {d.mqttClientId ?? "-"} • roomId: {d.roomId ?? "-"}
+                      MQTT: {d.mqttClientId ?? "-"} • Paired by:{" "}
+                      {d.pairedByUserId}
                     </div>
                   </div>
 
                   <div className="flex shrink-0 items-center gap-3">
                     <Link
                       className="text-sm underline underline-offset-4 hover:opacity-80"
+                      href={`/devices/${d.id}/telemetry`}
+                    >
+                      Telemetry
+                    </Link>
+                    <Link
+                      className="text-sm underline underline-offset-4 hover:opacity-80"
                       href={`/ota?deviceId=${d.id}`}
                     >
-                      View OTA
+                      OTA
                     </Link>
                   </div>
                 </div>

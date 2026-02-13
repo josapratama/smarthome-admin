@@ -1,19 +1,23 @@
-import { NextResponse } from "next/server";
-import { getAccessToken } from "@/lib/api/server/auth-cookies";
-import { upstreamFetch } from "@/lib/api/server/upstream";
+import { NextRequest } from "next/server";
+import { backendFetch } from "@/lib/api/server/backend";
+import { handleApiError } from "@/lib/api/server/error-handler";
+import type { ChangePasswordRequest } from "@/lib/api/dto/auth.dto";
 
-export async function POST(req: Request) {
-  const token = getAccessToken();
-  if (!token)
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+export async function POST(request: NextRequest) {
+  try {
+    const body: ChangePasswordRequest = await request.json();
 
-  const body = await req.json().catch(() => ({}));
+    const data = await backendFetch(
+      "/api/v1/auth/change-password",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+      { auth: "admin_cookie" },
+    );
 
-  const { res: upstream, payload } = await upstreamFetch("/change-password", {
-    method: "POST",
-    headers: { authorization: `Bearer ${token}` },
-    body: JSON.stringify(body),
-  });
-
-  return NextResponse.json(payload ?? null, { status: upstream.status });
+    return Response.json(data);
+  } catch (error) {
+    return handleApiError(error);
+  }
 }

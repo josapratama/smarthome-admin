@@ -1,34 +1,35 @@
-// app/api/devices/route.ts
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { upstreamFetch } from "@/lib/api/server/upstream";
+import { backendFetch } from "@/lib/api/server/backend";
+import { handleApiError } from "@/lib/api/server/error-handler";
 
 export async function GET(req: Request) {
-  const jar = await cookies();
-  const token = jar.get("admin_token")?.value;
+  try {
+    const url = new URL(req.url);
+    const sp = url.searchParams;
 
-  if (!token) {
-    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    // sanitize homeId
+    const homeId = sp.get("homeId");
+    if (!homeId || homeId === "NaN" || Number.isNaN(Number(homeId))) {
+      sp.delete("homeId");
+    }
+
+    // sanitize status (backend cuma terima "true"/"false")
+    const status = sp.get("status");
+    if (status && status !== "true" && status !== "false") {
+      sp.delete("status");
+    }
+
+    const qs = sp.toString();
+    const path = qs ? `/devices?${qs}` : "/devices";
+
+    const data = await backendFetch(
+      path,
+      { method: "GET" },
+      { auth: "admin_cookie" },
+    );
+
+    return NextResponse.json(data);
+  } catch (error) {
+    return handleApiError(error);
   }
-
-  // pass query params (homeId/status) kalau ada
-  const url = new URL(req.url);
-  const qs = url.searchParams.toString();
-  const path = qs ? `/devices?${qs}` : "/devices";
-
-  const { res, payload } = await upstreamFetch(path, {
-    method: "GET",
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
-  });
-
-  if (!res.ok) {
-    return NextResponse.json(payload ?? { message: "Failed" }, {
-      status: res.status,
-    });
-  }
-
-  // backend returns { data: [...] }
-  return NextResponse.json(payload);
 }

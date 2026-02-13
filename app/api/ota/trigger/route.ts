@@ -1,23 +1,19 @@
-import { NextResponse } from "next/server";
-import { apiFetch, ApiError } from "@/lib/api/client";
-import { API } from "@/lib/api/endpoints";
+import { NextRequest } from "next/server";
+import { backendFetch } from "@/lib/api/server/backend";
+import { handleApiError } from "@/lib/api/server/error-handler";
+import type { OtaTriggerRequest } from "@/lib/api/dto/ota.dto";
 
-export async function POST(req: Request) {
+export async function POST(request: NextRequest) {
   try {
-    const body = (await req.json()) as { deviceId: number; releaseId: number };
+    const body: OtaTriggerRequest = await request.json();
 
-    const data = await apiFetch(API.ota.devices(body.deviceId), {
+    const data = await backendFetch("/api/v1/ota/trigger", {
       method: "POST",
-      body: JSON.stringify({ releaseId: body.releaseId }),
+      body: JSON.stringify(body),
     });
 
-    return NextResponse.json(data, { status: 201 });
-  } catch (e: unknown) {
-    if (e instanceof ApiError) {
-      return NextResponse.json(e.payload ?? { message: "Trigger failed" }, {
-        status: e.status,
-      });
-    }
-    return NextResponse.json({ message: "Unexpected error" }, { status: 500 });
+    return Response.json(data);
+  } catch (error) {
+    return handleApiError(error);
   }
 }

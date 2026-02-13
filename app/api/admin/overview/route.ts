@@ -1,36 +1,69 @@
+// app/api/admin/overview/route.ts
 import { NextResponse } from "next/server";
-import { apiFetch } from "@/lib/api/client";
-import { API } from "@/lib/api/endpoints";
+import { upstreamFetch } from "@/lib/server/upstream";
+import { cookies } from "next/headers";
 
-type Overview = {
-  users: number;
-  homes: number;
-  devices: number;
-  onlineDevices: number;
-  offlineDevices: number;
+type BackendDashboardHome = {
+  id: number;
+  name: string;
+  city: string | null;
+  updatedAt: string;
+  roleInHome: "OWNER" | "MEMBER" | string;
+  devicesOnline: number;
+  devicesOffline: number;
+  openAlarms: number;
+};
+
+type BackendDashboardResponse = {
+  data: {
+    myHomesCount: number;
+    pendingInvitesCount: number;
+    homes: BackendDashboardHome[];
+  };
 };
 
 export async function GET() {
-  // pakai endpoint yang sudah ada (no backend changes)
-  const [usersRes, homesRes, devicesRes] = await Promise.all([
-    apiFetch<{ data: unknown[] }>(API.admin.users),
-    apiFetch<{ data: unknown[] }>(API.homes.list),
-    apiFetch<{ data: { status: boolean }[] }>(API.devices.list),
-  ]);
+  const jar = await cookies();
+  const token = jar.get("admin_token")?.value;
 
-  const users = usersRes.data.length;
-  const homes = homesRes.data.length;
-  const devices = devicesRes.data.length;
+  if (!token) {
+    return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
-  const onlineDevices = devicesRes.data.filter((d) => d.status === true).length;
-  const offlineDevices = devices - onlineDevices;
+  // ✅ HARUS pakai path backend yang benar
+  const { res, payload } = await upstreamFetch("/dashboard", {
+    method: "GET",
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  });
 
-  const out: Overview = {
-    users,
-    homes,
-    devices,
+  if (!res.ok) {
+    return NextResponse.json(
+      payload ?? { message: "Failed to load overview" },
+      { status: res.status },
+    );
+  }
+
+  const p = payload as BackendDashboardResponse;
+  const homes = Array.isArray(p?.data?.homes) ? p.data.homes : [];
+
+  const onlineDevices = homes.reduce(
+    (acc, h) => acc + (h.devicesOnline ?? 0),
+    0,
+  );
+  const offlineDevices = homes.reduce(
+    (acc, h) => acc + (h.devicesOffline ?? 0),
+    0,
+  );
+
+  return NextResponse.json({
+    users: 0,
+    homes: p.data.myHomesCount ?? homes.length,
+    devices: onlineDevices + offlineDevices,
     onlineDevices,
     offlineDevices,
-  };
-  return NextResponse.json(out);
+    pendingInvitesCount: p.data.pendingInvitesCount ?? 0,
+    homesList: homes,
+  });
 }

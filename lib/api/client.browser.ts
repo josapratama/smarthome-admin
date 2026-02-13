@@ -1,18 +1,15 @@
-// lib/api/client.browser.ts
 import { ApiError, pickMessage } from "./errors";
 import { readPayload } from "./payload";
 
 type BrowserFetchOptions = Omit<RequestInit, "headers"> & {
   headers?: Record<string, string>;
-  retryOn401?: boolean; // default true
+  retryOn401?: boolean;
 };
 
 async function doFetch(path: string, init: BrowserFetchOptions) {
   return fetch(path, {
     ...init,
-    headers: {
-      ...(init.headers ?? {}),
-    },
+    headers: { ...(init.headers ?? {}) },
     credentials: "include",
     cache: "no-store",
   });
@@ -26,7 +23,6 @@ export async function apiFetchBrowser<T>(
 
   let res = await doFetch(path, init);
 
-  // 401 => refresh => retry sekali
   if (res.status === 401 && retryOn401) {
     const r = await doFetch("/api/auth/refresh", {
       method: "POST",

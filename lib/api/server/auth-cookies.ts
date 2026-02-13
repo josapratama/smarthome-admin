@@ -1,4 +1,4 @@
-// lib/server/auth-cookies.ts
+import "server-only";
 import { cookies } from "next/headers";
 
 const ACCESS_COOKIE = "admin_token";
@@ -16,11 +16,9 @@ export async function setAuthCookies(
   refreshToken?: string,
 ) {
   const jar = await cookies();
-
   jar.set(ACCESS_COOKIE, accessToken, { ...baseCookieOptions });
-  if (refreshToken) {
+  if (refreshToken)
     jar.set(REFRESH_COOKIE, refreshToken, { ...baseCookieOptions });
-  }
 }
 
 export async function clearAuthCookies() {

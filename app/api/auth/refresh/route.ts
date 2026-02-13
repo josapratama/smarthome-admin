@@ -1,12 +1,12 @@
-// app/api/auth/refresh/route.ts
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
+
 import {
+  clearAuthCookies,
   getRefreshToken,
   setAuthCookies,
-  clearAuthCookies,
-} from "@/lib/server/auth-cookies";
-import { upstreamFetch } from "@/lib/server/upstream";
-import { cookies } from "next/headers";
+} from "@/lib/api/server/auth-cookies";
+import { authUpstream } from "@/lib/api/server/auth-upstream";
 
 export async function POST() {
   const jar = await cookies();
@@ -22,13 +22,10 @@ export async function POST() {
     );
   }
 
-  const { res, payload } = await upstreamFetch("/api/v1/refresh", {
-    method: "POST",
-    body: JSON.stringify({
-      sessionId: Number(sessionId),
-      refreshToken,
-    }),
-  });
+  const { res, payload } = await authUpstream.refresh(
+    Number(sessionId),
+    refreshToken,
+  );
 
   if (!res.ok) {
     await clearAuthCookies();
@@ -46,12 +43,10 @@ export async function POST() {
     );
   }
 
-  // refresh rotate token -> set cookie baru
   await setAuthCookies(data.accessToken, data.refreshToken);
 
   const resp = NextResponse.json({ ok: true }, { status: 200 });
 
-  // update sessionId jika backend ngasih (biasanya sama)
   if (data.sessionId) {
     resp.cookies.set("admin_session_id", String(data.sessionId), {
       httpOnly: true,

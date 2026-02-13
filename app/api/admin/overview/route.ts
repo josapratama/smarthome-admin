@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { backendFetch } from "@/lib/api/server";
 import { ApiError } from "@/lib/api/errors";
+import { backendFetch } from "@/lib/api/server";
 
 type BackendDashboardHome = {
   id: number;

@@ -1,7 +1,7 @@
 // app/api/devices/route.ts
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { upstreamFetch } from "@/lib/server/upstream";
+import { upstreamFetch } from "@/lib/api/server/upstream";
 
 export async function GET(req: Request) {
   const jar = await cookies();

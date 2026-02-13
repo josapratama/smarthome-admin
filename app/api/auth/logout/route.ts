@@ -1,8 +1,8 @@
 // app/api/auth/logout/route.ts
 import { NextResponse } from "next/server";
-import { clearAuthCookies } from "@/lib/server/auth-cookies";
-import { upstreamFetch } from "@/lib/server/upstream";
 import { cookies } from "next/headers";
+import { clearAuthCookies } from "@/lib/api/server/auth-cookies";
+import { upstreamFetch } from "@/lib/api/server/upstream";
 
 export async function POST() {
   const jar = await cookies();
@@ -10,7 +10,7 @@ export async function POST() {
 
   // best effort logout ke backend
   if (sessionId) {
-    await upstreamFetch("/api/v1/logout", {
+    await upstreamFetch("/logout", {
       method: "POST",
       body: JSON.stringify({ sessionId: Number(sessionId) }),
     }).catch(() => null);

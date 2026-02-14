@@ -36,7 +36,7 @@ export function Sidebar() {
     { name: "Notifications", href: "/notifications", icon: Bell },
     { name: "Invites", href: "/invites", icon: Mail },
     { name: "AI Models", href: "/ai", icon: Brain },
-    { name: "Device Config", href: "/device-config", icon: Settings },
+    { name: t("settings"), href: "/settings", icon: Settings },
   ];
 
   return (

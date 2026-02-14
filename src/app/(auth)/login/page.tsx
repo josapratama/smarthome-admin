@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Eye, EyeOff, Loader2, Shield } from "lucide-react";
+import { Eye, EyeOff, Loader2, Home, Zap, Shield, Lock } from "lucide-react";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,137 +58,211 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-background to-muted/40">
-      <div className="mx-auto grid min-h-screen max-w-6xl grid-cols-1 items-stretch gap-6 p-6 md:grid-cols-2">
-        <div className="relative hidden overflow-hidden rounded-2xl border bg-card p-10 shadow-sm md:flex md:flex-col md:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Shield className="h-4 w-4" />
-              <span>Secure Admin Console</span>
-            </div>
-            <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-              {process.env.NEXT_PUBLIC_APP_NAME ?? "Smart Home Admin"}
-            </h1>
-            <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
-              Kelola device, firmware, OTA, monitoring, dan homes dari satu
-              tempat. Login untuk melanjutkan.
-            </p>
-
-            <div className="mt-8 grid gap-3 text-sm text-muted-foreground">
-              <div className="rounded-xl border bg-background/60 p-4">
-                <div className="font-medium text-foreground">Tips</div>
-                <div className="mt-1">
-                  Gunakan akun admin. Token disimpan sebagai cookie httpOnly.
-                </div>
-              </div>
-              <div className="rounded-xl border bg-background/60 p-4">
-                <div className="font-medium text-foreground">Redirect</div>
-                <div className="mt-1">
-                  Setelah login →{" "}
-                  <span className="font-mono text-foreground">{next}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-muted-foreground">
-            © {new Date().getFullYear()}{" "}
-            {process.env.NEXT_PUBLIC_APP_NAME ?? "Admin"}
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      {/* Header */}
+      <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          >
+            <Home className="h-6 w-6 text-primary" />
+            <span className="text-xl font-bold">Smart Home</span>
+          </Link>
+          <Link href="/">
+            <Button variant="ghost" size="sm">
+              Back to Home
+            </Button>
+          </Link>
         </div>
+      </header>
 
-        <div className="flex items-center justify-center">
-          <Card className="w-full max-w-md rounded-2xl shadow-sm">
-            <CardHeader className="space-y-1">
-              <CardTitle className="text-xl">Admin Login</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Masuk menggunakan username & password.
+      <div className="container mx-auto px-4 py-12">
+        <div className="grid lg:grid-cols-2 gap-12 items-center max-w-6xl mx-auto">
+          {/* Left Side - Info */}
+          <div className="hidden lg:block space-y-8">
+            <div>
+              <h1 className="text-4xl font-bold mb-4">Welcome to Smart Home</h1>
+              <p className="text-lg text-muted-foreground">
+                Kelola semua perangkat IoT Anda dari satu platform yang aman dan
+                mudah digunakan.
               </p>
-            </CardHeader>
+            </div>
 
-            <CardContent>
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
-                  <Input
-                    id="username"
-                    autoComplete="username"
-                    placeholder="admin"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    disabled={loading}
-                    required
-                  />
+            <div className="space-y-6">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Shield className="h-6 w-6 text-primary" />
                 </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Secure & Private</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Keamanan tingkat enterprise dengan enkripsi end-to-end untuk
+                    melindungi data Anda.
+                  </p>
+                </div>
+              </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Password</Label>
-                    <Link
-                      href="/forgot-password"
-                      className={cn(
-                        "text-xs text-muted-foreground underline-offset-4 hover:underline",
-                        loading && "pointer-events-none opacity-50",
-                      )}
-                    >
-                      Lupa password?
-                    </Link>
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-lg bg-blue-500/10 flex items-center justify-center flex-shrink-0">
+                  <Zap className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Real-time Control</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Kontrol dan monitoring perangkat secara real-time dari mana
+                    saja.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 rounded-lg bg-purple-500/10 flex items-center justify-center flex-shrink-0">
+                  <Lock className="h-6 w-6 text-purple-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-1">Role-based Access</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Sistem manajemen user dengan role-based access control untuk
+                    keamanan maksimal.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-muted/50 rounded-xl p-6 border">
+              <div className="text-sm text-muted-foreground mb-2">
+                Demo Credentials
+              </div>
+              <div className="space-y-2 font-mono text-sm">
+                <div>
+                  <span className="text-muted-foreground">Admin:</span>{" "}
+                  <span className="font-semibold">admin / admin123</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">User:</span>{" "}
+                  <span className="font-semibold">user / user123</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Side - Login Form */}
+          <div className="flex items-center justify-center">
+            <Card className="w-full max-w-md shadow-2xl border-2">
+              <CardHeader className="space-y-1 pb-6">
+                <div className="flex items-center justify-center mb-4">
+                  <div className="h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center">
+                    <Home className="h-8 w-8 text-primary" />
                   </div>
+                </div>
+                <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+                <p className="text-sm text-muted-foreground text-center">
+                  Masuk ke akun Anda untuk melanjutkan
+                </p>
+              </CardHeader>
 
-                  <div className="relative">
+              <CardContent>
+                <form onSubmit={onSubmit} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
                     <Input
-                      id="password"
-                      type={showPw ? "text" : "password"}
-                      autoComplete="current-password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
+                      id="username"
+                      autoComplete="username"
+                      placeholder="Masukkan username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
                       disabled={loading}
                       required
-                      className="pr-10"
+                      className="h-11"
                     />
-                    <button
-                      type="button"
-                      aria-label={showPw ? "Hide password" : "Show password"}
-                      onClick={() => setShowPw((v) => !v)}
-                      className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
-                      disabled={loading}
-                    >
-                      {showPw ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </button>
                   </div>
-                </div>
 
-                {err ? (
-                  <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-                    {err}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="password">Password</Label>
+                      <Link
+                        href="/forgot-password"
+                        className={cn(
+                          "text-xs text-primary hover:underline",
+                          loading && "pointer-events-none opacity-50",
+                        )}
+                      >
+                        Lupa password?
+                      </Link>
+                    </div>
+
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPw ? "text" : "password"}
+                        autoComplete="current-password"
+                        placeholder="Masukkan password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        disabled={loading}
+                        required
+                        className="pr-10 h-11"
+                      />
+                      <button
+                        type="button"
+                        aria-label={showPw ? "Hide password" : "Show password"}
+                        onClick={() => setShowPw((v) => !v)}
+                        className="absolute inset-y-0 right-0 flex items-center px-3 text-muted-foreground hover:text-foreground"
+                        disabled={loading}
+                      >
+                        {showPw ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                ) : null}
 
-                <Button className="w-full" disabled={loading}>
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Signing in...
-                    </span>
-                  ) : (
-                    "Sign in"
-                  )}
-                </Button>
+                  {err ? (
+                    <div className="rounded-lg border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                      {err}
+                    </div>
+                  ) : null}
 
-                <div className="text-center text-xs text-muted-foreground">
-                  Dengan login, kamu menyetujui penggunaan sistem ini untuk
-                  keperluan admin.
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+                  <Button className="w-full h-11" disabled={loading}>
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Signing in...
+                      </span>
+                    ) : (
+                      "Sign In"
+                    )}
+                  </Button>
+
+                  <div className="text-center text-xs text-muted-foreground pt-2">
+                    Dengan login, Anda menyetujui{" "}
+                    <Link href="#" className="text-primary hover:underline">
+                      Terms of Service
+                    </Link>{" "}
+                    dan{" "}
+                    <Link href="#" className="text-primary hover:underline">
+                      Privacy Policy
+                    </Link>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="border-t mt-12">
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-center text-sm text-muted-foreground">
+            © {new Date().getFullYear()} Smart Home Platform. All rights
+            reserved.
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

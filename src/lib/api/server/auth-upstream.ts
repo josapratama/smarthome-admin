@@ -30,6 +30,9 @@ export const authUpstream = {
   async login(username: string, password: string) {
     const url = `${BACKEND_URL}${API_PREFIX}/login`;
 
+    console.log("Calling backend login:", url);
+    console.log("Request body:", { username, password: "***" });
+
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -37,10 +40,30 @@ export const authUpstream = {
         body: JSON.stringify({ username, password }),
       });
 
-      const payload = await res.json().catch(() => null);
+      console.log("Backend response status:", res.status);
+      console.log("Backend response ok:", res.ok);
 
-      return { res, payload: payload as LoginResponse | ErrorResponse };
+      // Try to get response as text first
+      const text = await res.text();
+      console.log("Backend response text:", text.substring(0, 200));
+
+      // Try to parse as JSON
+      let payload: LoginResponse | ErrorResponse | null = null;
+      try {
+        payload = JSON.parse(text);
+      } catch (err) {
+        console.error("Failed to parse JSON, response was:", text);
+        payload = {
+          error: "INVALID_RESPONSE",
+          message: `Backend returned non-JSON response: ${text.substring(0, 100)}`,
+        };
+      }
+
+      console.log("Backend payload:", payload);
+
+      return { res, payload };
     } catch (error) {
+      console.error("Network error calling backend:", error);
       return {
         res: { ok: false, status: 500 } as Response,
         payload: { error: "NETWORK_ERROR", message: String(error) },

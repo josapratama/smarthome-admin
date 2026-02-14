@@ -80,7 +80,10 @@ export default function AdminSettingsPage() {
   };
 
   const handleSave = () => {
+    console.log("Saving preferences:", localPrefs);
     updatePreferences(localPrefs);
+
+    // Show toast immediately (optimistic)
     toast({
       title: t("settingsSaved"),
       description: t("settingsSavedDesc"),

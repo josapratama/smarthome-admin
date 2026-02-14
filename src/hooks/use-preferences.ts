@@ -32,6 +32,7 @@ export function usePreferences() {
   // Update preferences (partial)
   const updateMutation = useMutation({
     mutationFn: async (preferences: Partial<UserPreferencesDTO>) => {
+      console.log("Updating preferences via API:", preferences);
       const response = await apiFetchBrowser<PreferencesUpdateResponse>(
         "/api/v1/preferences",
         {
@@ -39,14 +40,23 @@ export function usePreferences() {
           body: JSON.stringify(preferences),
         },
       );
+      console.log("API response:", response);
       return response.data;
     },
     onSuccess: (data) => {
+      console.log("Update successful, new data:", data);
       queryClient.setQueryData(PREFERENCES_KEY, data);
       // Also update localStorage for immediate access
       if (typeof window !== "undefined") {
         localStorage.setItem("user-preferences", JSON.stringify(data));
+        console.log("Updated localStorage:", data);
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event("preferences-changed"));
+        console.log("Dispatched preferences-changed event");
       }
+    },
+    onError: (error) => {
+      console.error("Failed to update preferences:", error);
     },
   });
 
@@ -66,6 +76,8 @@ export function usePreferences() {
       queryClient.setQueryData(PREFERENCES_KEY, data);
       if (typeof window !== "undefined") {
         localStorage.setItem("user-preferences", JSON.stringify(data));
+        // Dispatch custom event to notify other components
+        window.dispatchEvent(new Event("preferences-changed"));
       }
     },
   });

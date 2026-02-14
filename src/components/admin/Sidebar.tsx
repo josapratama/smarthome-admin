@@ -1,0 +1,71 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  Cpu,
+  Package,
+  Upload,
+  Activity,
+  Bell,
+  Mail,
+  Terminal,
+  Home,
+  DoorOpen,
+  AlertTriangle,
+  Brain,
+  Settings,
+} from "lucide-react";
+import { useTranslation } from "@/hooks/use-translation";
+
+export function Sidebar() {
+  const pathname = usePathname();
+  const { t } = useTranslation();
+
+  const navigation = [
+    { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+    { name: t("devices"), href: "/devices", icon: Cpu },
+    { name: t("homes"), href: "/homes", icon: Home },
+    { name: t("rooms"), href: "/rooms", icon: DoorOpen },
+    { name: t("firmware"), href: "/firmware", icon: Package },
+    { name: t("ota"), href: "/ota", icon: Upload },
+    { name: t("monitoring"), href: "/monitoring", icon: Activity },
+    { name: t("alarms"), href: "/alarms", icon: AlertTriangle },
+    { name: "Commands", href: "/commands", icon: Terminal },
+    { name: "Notifications", href: "/notifications", icon: Bell },
+    { name: "Invites", href: "/invites", icon: Mail },
+    { name: "AI Models", href: "/ai", icon: Brain },
+    { name: "Device Config", href: "/device-config", icon: Settings },
+  ];
+
+  return (
+    <aside className="w-64 border-r bg-card">
+      <div className="flex h-16 items-center border-b px-6">
+        <h1 className="text-xl font-bold">Smart Home Admin</h1>
+      </div>
+      <nav className="space-y-1 p-4">
+        {navigation.map((item) => {
+          const isActive =
+            pathname === item.href || pathname.startsWith(item.href + "/");
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.name}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span>{item.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </aside>
+  );
+}

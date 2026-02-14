@@ -1,0 +1,98 @@
+/**
+ * Server-side utility to call backend API with authentication
+ * Used in Next.js API routes to proxy authenticated requests
+ */
+
+import { getAccessToken } from "./auth-cookies";
+
+const BACKEND_URL = process.env.BACKEND_BASE_URL || "http://localhost:3000";
+
+interface FetchOptions extends RequestInit {
+  auth?: "admin_cookie" | "none";
+}
+
+export async function backendFetch<T = any>(
+  path: string,
+  init: RequestInit = {},
+  options: FetchOptions = {},
+): Promise<T> {
+  const { auth = "admin_cookie", ...fetchInit } = options;
+
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...(init.headers as Record<string, string>),
+  };
+
+  // Add authorization if needed
+  if (auth === "admin_cookie") {
+    const token = await getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
+
+  const response = await fetch(url, {
+    ...fetchInit,
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: "UNKNOWN_ERROR",
+      message: response.statusText,
+    }));
+
+    throw {
+      status: response.status,
+      ...error,
+    };
+  }
+
+  return response.json();
+}
+
+export async function backendUpload<T = any>(
+  path: string,
+  formData: FormData,
+  options: FetchOptions = {},
+): Promise<T> {
+  const { auth = "admin_cookie", ...fetchInit } = options;
+
+  const headers: Record<string, string> = {
+    ...(fetchInit.headers as Record<string, string>),
+  };
+
+  // Add authorization if needed
+  if (auth === "admin_cookie") {
+    const token = await getAccessToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+
+  const url = path.startsWith("http") ? path : `${BACKEND_URL}${path}`;
+
+  const response = await fetch(url, {
+    method: "POST",
+    ...fetchInit,
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({
+      error: "UNKNOWN_ERROR",
+      message: response.statusText,
+    }));
+
+    throw {
+      status: response.status,
+      ...error,
+    };
+  }
+
+  return response.json();
+}
